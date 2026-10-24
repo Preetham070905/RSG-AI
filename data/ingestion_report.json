@@ -1,0 +1,13 @@
+{
+  "source_rows": 51,
+  "loaded_rows": 50,
+  "quarantined_rows": 1,
+  "quarantined_transaction_ids": [
+    "TXN0051"
+  ],
+  "notes": [
+    "Rows with missing or invalid required values are excluded instead of silently imputed.",
+    "Revenue is quantity \u00d7 unit price \u2212 discount amount.",
+    "Returned transactions are retained in the database but excluded from completed-sales analytics."
+  ]
+}

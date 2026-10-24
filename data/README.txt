@@ -1,0 +1,1 @@
+The provided CSV is copied here as ai_bi_assistant_sales_data.csv. Local SQLite DB is generated at runtime and ignored by Git.
