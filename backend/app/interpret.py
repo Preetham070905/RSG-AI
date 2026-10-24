@@ -47,7 +47,13 @@ def deterministic_intent(question):
 
     if any(
         term in q
-        for term in ["compare", "change between", "difference between", "versus", " vs"]
+        for term in [
+            "compare",
+            "change between",
+            "difference between",
+            "versus",
+            " vs",
+        ]
     ):
         months = _month_from_text(q)
         return "month_comparison", {
@@ -76,6 +82,7 @@ def deterministic_intent(question):
         ]
     ):
         return "top_region", {}
+
     if any(
         term in q
         for term in [
@@ -88,6 +95,7 @@ def deterministic_intent(question):
         ]
     ):
         return "top_category", {}
+
     if any(
         term in q
         for term in [
@@ -115,6 +123,7 @@ def deterministic_intent(question):
 
 def interpret(question):
     intent, params = deterministic_intent(question)
+
     if intent:
         return intent, params, "deterministic"
 
@@ -127,7 +136,7 @@ def interpret(question):
         from google.genai import types
 
         client = genai.Client(api_key=api_key)
-        model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        model = os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
 
         response = client.models.generate_content(
             model=model,
@@ -135,10 +144,13 @@ def interpret(question):
                 "Classify this question about sales analytics. "
                 "Choose exactly one allowed intent. "
                 "Allowed intents: total_revenue, top_product, "
-                "monthly_trend, top_region, month_comparison, unsupported. "
-                "For month_comparison, provide month_a and month_b as YYYY-MM "
-                "or null. Default the year to 2026 when omitted. "
-                "Never generate SQL. Question: " + question
+                "top_category, monthly_trend, top_region, "
+                "month_comparison, unsupported. "
+                "For month_comparison, provide month_a and month_b "
+                "as YYYY-MM or null. Default the year to 2026 "
+                "when omitted. For other intents, set both months "
+                "to null. Never generate SQL. Question: "
+                + question
             ),
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -150,16 +162,27 @@ def interpret(question):
                             "enum": [
                                 "total_revenue",
                                 "top_product",
+                                "top_category",
                                 "monthly_trend",
                                 "top_region",
                                 "month_comparison",
                                 "unsupported",
                             ],
                         },
-                        "month_a": {"type": "STRING", "nullable": True},
-                        "month_b": {"type": "STRING", "nullable": True},
+                        "month_a": {
+                            "type": "STRING",
+                            "nullable": True,
+                        },
+                        "month_b": {
+                            "type": "STRING",
+                            "nullable": True,
+                        },
                     },
-                    "required": ["intent", "month_a", "month_b"],
+                    "required": [
+                        "intent",
+                        "month_a",
+                        "month_b",
+                    ],
                 },
             ),
         )
@@ -174,8 +197,10 @@ def interpret(question):
             return "unsupported", {}, "fallback"
 
         params = {}
+
         for key in ("month_a", "month_b"):
             month = data.get(key)
+
             if month is None:
                 params[key] = None
             elif isinstance(month, str) and re.fullmatch(
@@ -188,5 +213,8 @@ def interpret(question):
         return intent, params, "gemini"
 
     except Exception as exc:
-        print(f"Gemini classification failed: {type(exc).__name__}: {exc}")
+        print(
+            f"Gemini classification failed: "
+            f"{type(exc).__name__}: {exc}"
+        )
         return "unsupported", {}, "fallback"
